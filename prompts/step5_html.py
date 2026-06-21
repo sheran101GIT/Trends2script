@@ -1,0 +1,682 @@
+"""Step 5 — Generate a complete standalone HTML page matching the TCC reference template.
+
+Strategy: Keep the prompt SMALL (no embedded CSS). The AI generates the HTML structure
+and content using the tcc-* class names. The runner then reads the full CSS from the
+reference template and wraps the output into a complete standalone HTML file.
+"""
+
+import os
+
+
+def get_reference_css() -> str:
+    """
+    Returns the full <style>...</style> block for the TCC Design System.
+    Hardcoded to ensure reliable and high-quality CSS styling for every generated HTML file.
+    """
+    return """<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg-body: #f8f9fa;
+  --bg-card: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --primary: #3b82f6;
+  --primary-light: #eff6ff;
+  --pink: #ec4899;
+  --pink-light: #fdf2f8;
+  --green: #10b981;
+  --green-light: #ecfdf5;
+  --yellow: #f59e0b;
+  --yellow-light: #fffbeb;
+  --blue: #3b82f6;
+  --blue-light: #eff6ff;
+  --red: #ef4444;
+  --red-light: #fef2f2;
+  --border: #e2e8f0;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --font-sans: 'Inter', sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Layout */
+.tcc-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+@media (min-width: 900px) {
+  .tcc-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+.tcc-sidebar {
+  flex: 0 0 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+@media (min-width: 900px) {
+  .tcc-sidebar {
+    position: sticky;
+    top: 32px;
+  }
+}
+.tcc-content {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-card);
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+@media (max-width: 768px) {
+  .tcc-content {
+    padding: 24px;
+  }
+}
+
+/* Hero */
+.tcc-hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: 48px;
+  margin: 32px auto 0;
+  max-width: 1200px;
+  width: calc(100% - 40px);
+  box-shadow: var(--shadow-lg);
+  box-sizing: border-box;
+}
+.tcc-hero-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+@media (min-width: 900px) {
+  .tcc-hero-inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .tcc-hero-left {
+    flex: 1.2;
+  }
+  .tcc-hero-right {
+    flex: 1;
+  }
+}
+.tcc-hero-title {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 16px 0;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.tcc-hero-title span.pink {
+  color: var(--pink);
+}
+.tcc-hero-subtitle {
+  font-size: 18px;
+  color: #cbd5e1;
+  margin: 0;
+  line-height: 1.5;
+}
+.tcc-meta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.tcc-meta-badge {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.tcc-meta-badge.pink {
+  background: var(--pink);
+  color: white;
+}
+
+.tcc-hero-right {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.tcc-metric-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  transition: transform 0.2s, background 0.2s;
+}
+.tcc-metric-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.1);
+}
+.tcc-metric-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+.tcc-metric-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: white;
+  display: block;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+.tcc-metric-note {
+  font-size: 12px;
+  color: #94a3b8;
+  display: block;
+}
+
+/* Sidebar */
+.tcc-toc-box, .tcc-quick-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+}
+.tcc-toc-head, .tcc-quick-head {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-main);
+}
+.tcc-toc-box ol {
+  margin: 0;
+  padding: 0 0 0 20px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.tcc-toc-box li {
+  margin-bottom: 10px;
+}
+.tcc-toc-box a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.tcc-toc-box a:hover {
+  color: var(--primary);
+}
+.tcc-quick-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 14px;
+}
+.tcc-quick-row:last-child {
+  border-bottom: none;
+}
+.tcc-quick-row .ql {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.tcc-quick-row .qv {
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: right;
+  max-width: 60%;
+}
+
+/* Content Typography */
+.tcc-h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 48px 0 24px;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+.tcc-h3 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 32px 0 16px;
+  color: var(--text-main);
+}
+.tcc-p {
+  font-size: 16px;
+  color: var(--text-main);
+  margin-bottom: 24px;
+  line-height: 1.7;
+}
+.tcc-src {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Callouts */
+.tcc-callout {
+  padding: 20px 24px;
+  border-radius: var(--radius-sm);
+  margin: 32px 0;
+  border-left: 4px solid;
+}
+.tcc-callout p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.tcc-callout strong {
+  font-weight: 700;
+}
+.tcc-cb-yw { background: var(--yellow-light); border-color: var(--yellow); color: #b45309; }
+.tcc-cb-gn { background: var(--green-light); border-color: var(--green); color: #047857; }
+.tcc-cb-bl { background: var(--blue-light); border-color: var(--blue); color: #1d4ed8; }
+.tcc-cb-pk { background: var(--pink-light); border-color: var(--pink); color: #be185d; }
+
+/* Badges */
+.tcc-gn, .tcc-yw, .tcc-rd, .tcc-pk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.tcc-gn { background: var(--green-light); color: var(--green); }
+.tcc-yw { background: var(--yellow-light); color: var(--yellow); }
+.tcc-rd { background: var(--red-light); color: var(--red); }
+.tcc-pk { background: var(--pink-light); color: var(--pink); }
+
+/* Tables */
+.tcc-table-wrap {
+  overflow-x: auto;
+  margin: 32px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+.tcc-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.tcc-table th {
+  background: #f1f5f9;
+  padding: 16px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.tcc-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  color: var(--text-main);
+}
+.tcc-table tr:last-child td {
+  border-bottom: none;
+}
+.tcc-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* Grids / Cards */
+.tcc-co-grid, .tcc-factor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 24px;
+  margin: 32px 0;
+}
+.tcc-co-card, .tcc-factor-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.tcc-co-card:hover, .tcc-factor-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+.tcc-co-emoji, .tcc-fi {
+  font-size: 32px;
+  margin-bottom: 16px;
+  background: #f1f5f9;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.tcc-co-name, .tcc-ft {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--text-main);
+}
+.tcc-co-type {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 20px;
+  font-weight: 500;
+}
+.tcc-co-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+.tcc-co-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.tcc-co-row .cr { color: var(--text-muted); }
+.tcc-co-row .cs { font-weight: 600; text-align: right; }
+.tcc-fd {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* FAQ */
+.tcc-faq-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  background: var(--bg-card);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.tcc-faq-q {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--bg-card);
+  transition: background 0.2s;
+  user-select: none;
+}
+.tcc-faq-q:hover {
+  background: #f8fafc;
+}
+.tcc-faq-icon {
+  font-size: 24px;
+  color: var(--primary);
+  transition: transform 0.3s ease;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary-light);
+}
+.tcc-faq-a {
+  padding: 0 24px 24px;
+  display: none;
+  font-size: 15px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 0;
+  padding-top: 24px;
+  line-height: 1.7;
+}
+.tcc-faq-item.open .tcc-faq-a {
+  display: block;
+  animation: slideDown 0.3s ease;
+}
+.tcc-faq-item.open .tcc-faq-icon {
+  transform: rotate(45deg);
+  background: var(--red-light);
+  color: var(--red);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Charts */
+.tcc-charts-row {
+  margin: 40px 0;
+}
+.tcc-chart-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 32px;
+  box-shadow: var(--shadow-sm);
+}
+.tcc-ct-ttl {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.tcc-ct-src {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 40px;
+}
+.tcc-bar-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: 16px;
+  height: 250px;
+  padding-bottom: 40px;
+  position: relative;
+  border-bottom: 2px solid var(--border);
+}
+.tcc-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.tcc-bar-top {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-main);
+}
+.tcc-bar {
+  width: 100%;
+  max-width: 80px;
+  border-radius: 6px 6px 0 0;
+  transition: height 1s ease;
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,0.1);
+}
+.tcc-bar-btm {
+  font-size: 13px;
+  color: var(--text-muted);
+  position: absolute;
+  bottom: 8px;
+  text-align: center;
+  width: 100%;
+  max-width: 80px;
+  font-weight: 500;
+}
+</style>"""
+
+
+from datetime import datetime
+
+def build_step5_prompt(step4_output: str, meta: dict = None) -> str:
+    """
+    Lean prompt — asks the model only for the CONTENT HTML using tcc-* classes.
+    The full CSS and <html>/<head>/<body> wrapper are added by the runner.
+    """
+    meta = meta or {}
+    author_name = meta.get("author_name", "The Crazy Careers")
+    read_time   = meta.get("read_time", "5 min read")
+    
+    # Process Auto date
+    raw_date = meta.get("publish_date", "Auto")
+    if raw_date.lower() == "auto":
+        publish_date = datetime.now().strftime("%B %d, %Y")
+    else:
+        publish_date = raw_date
+
+    return f"""
+STEP 5: CONVERT ARTICLE TO STYLED HTML CONTENT BLOCK
+
+[Article + FAQ + Schema from Step 4]:
+{step4_output}
+
+Convert the article above into an HTML content block using the TCC design system class names.
+Do NOT include <html>, <head>, <body>, or any <style> tags — output content only.
+
+═══════════════════════════════════════
+TCC CSS CLASS REFERENCE (use EXACTLY these class names)
+═══════════════════════════════════════
+
+HERO BANNER — wrap the title/intro/stats in this structure:
+  <div class="tcc-hero">
+    <div class="tcc-hero-inner">
+      <div class="tcc-hero-left">
+        <div class="tcc-meta-row">
+          <span class="tcc-meta-badge pink">{author_name}</span>
+          <span class="tcc-meta-badge">{read_time}</span>
+          <span class="tcc-meta-badge">{publish_date}</span>
+        </div>
+        <h1 class="tcc-hero-title">Title with <span class="pink">keyword</span></h1>
+        <p class="tcc-hero-subtitle">2-sentence subtitle</p>
+      </div>
+      <div class="tcc-hero-right">
+        <!-- 4 x .tcc-metric-card with .tcc-metric-label / .tcc-metric-value / .tcc-metric-note -->
+        <!-- Pull 4 key statistics from the article -->
+      </div>
+    </div>
+  </div>
+
+LAYOUT — sidebar left, content right:
+  <div class="tcc-layout">
+    <div class="tcc-sidebar">
+      <div class="tcc-toc-box">
+        <p class="tcc-toc-head">📋 Table of Contents</p>
+        <ol><!-- <li><a href="#section-id">Section Name</a></li> for each H2 --></ol>
+      </div>
+      <div class="tcc-quick-box">
+        <p class="tcc-quick-head">⚡ Quick Facts</p>
+        <!-- 5-7 x .tcc-quick-row with .ql (label) and .qv (value) spans -->
+      </div>
+    </div>
+    <div class="tcc-content">
+      <!-- All article content goes here -->
+    </div>
+  </div>
+
+SECTION HEADINGS:   <h2 id="unique-id" class="tcc-h2">...</h2>
+                    <h3 class="tcc-h3">...</h3>
+PARAGRAPHS:         <p class="tcc-p">...</p>
+TABLES:             <div class="tcc-table-wrap"><table class="tcc-table">
+                      <thead><tr><!-- th cells --></tr></thead>
+                      <tbody><!-- td cells --></tbody>
+                    </table></div>
+BADGES IN TABLES:   <span class="tcc-gn">green</span>  <span class="tcc-yw">yellow</span>
+                    <span class="tcc-rd">red</span>     <span class="tcc-pk">pink</span>
+SOURCE CREDIT:      <p class="tcc-src">Source: ...</p>
+CALLOUT BOXES:      <div class="tcc-callout tcc-cb-yw"><p>💡 <strong>Tip:</strong> ...</p></div>
+                    Use tcc-cb-gn (green), tcc-cb-yw (yellow), tcc-cb-bl (blue), tcc-cb-pk (pink)
+BAR CHART:          <div class="tcc-charts-row">
+                      <div class="tcc-chart-box">
+                        <p class="tcc-ct-ttl">Chart Title</p>
+                        <p class="tcc-ct-src">Source info</p>
+                        <div class="tcc-bar-row" style="height:110px;">
+                          <div class="tcc-bar-col">
+                            <div class="tcc-bar-top">value</div>
+                            <div class="tcc-bar" style="height:Xpx;background:linear-gradient(180deg,#f542b0,#be185d);"></div>
+                            <div class="tcc-bar-btm">label</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+COMPANY CARDS:      <div class="tcc-co-grid">
+                      <div class="tcc-co-card">
+                        <div class="tcc-co-emoji">🏢</div>
+                        <p class="tcc-co-name">Company</p>
+                        <p class="tcc-co-type">Type · City</p>
+                        <div class="tcc-co-row"><span class="cr">Key</span><span class="cs">Value</span></div>
+                      </div>
+                    </div>
+FACTOR CARDS:       <div class="tcc-factor-grid">
+                      <div class="tcc-factor-card">
+                        <p class="tcc-fi">🎯</p>
+                        <p class="tcc-ft">Factor Title</p>
+                        <p class="tcc-fd">Description</p>
+                      </div>
+                    </div>
+FAQ ACCORDION:      <div class="tcc-faq-item">
+                      <div class="tcc-faq-q"><strong>Question?</strong><span class="tcc-faq-icon">+</span></div>
+                      <div class="tcc-faq-a"><p>Answer text.</p></div>
+                    </div>
+
+═══════════════════════════════════════
+CONTENT RULES
+═══════════════════════════════════════
+
+1. Extract ALL data from the Step 4 article — do NOT invent numbers or facts.
+2. Put the 4 most important statistics into hero metric cards.
+3. Build the TOC from every H2 section (assign each a unique id like "tcc-salary" "tcc-experience").
+4. Put 5-7 quick data points in the sidebar Quick Facts.
+5. Convert every table in the article to .tcc-table format.
+6. Wrap tips/warnings/info as .tcc-callout boxes.
+7. Build the FAQ section using .tcc-faq-item accordion markup.
+8. Add a bar chart if the article has ranked numeric data (salary levels, etc.).
+9. Use .tcc-co-grid for company comparisons, .tcc-factor-grid for factor/reason lists.
+
+OUTPUT: Output ONLY the raw HTML block described above.
+No explanation. No markdown fences. No <html>/<head>/<body>/<style> tags.
+"""

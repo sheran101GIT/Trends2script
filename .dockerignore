@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.git/
+instance/
+*.db
+.gemini/
+# Local output files
+output/
+# Documentation
+README*.md
+# IDE settings
+.vscode/
+.idea/
+# Tests (not needed in production image)
+tests/
+pytest.ini
+.pytest_cache/

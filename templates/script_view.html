@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Pipeline — {{ topic }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366F1;
+            --primary-glow: rgba(99, 102, 241, .35);
+            --accent: #EC4899;
+            --accent-glow: rgba(236, 72, 153, .20);
+            --bg: #0F172A;
+            --surface: #1E293B;
+            --surface-hover: #334155;
+            --glass: rgba(30, 41, 59, .65);
+            --text: #F1F5F9;
+            --text-muted: #94A3B8;
+            --border: rgba(148, 163, 184, .15);
+            --success: #34D399;
+            --error: #F87171;
+            --info: #60A5FA;
+            --warning: #FBBF24;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 48px 24px;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 10%, var(--primary-glow), transparent),
+                radial-gradient(ellipse 60% 50% at 80% 90%, var(--accent-glow), transparent);
+            pointer-events: none;
+            z-index: 0;
+            animation: bgPulse 8s ease-in-out infinite alternate;
+        }
+        @keyframes bgPulse {
+            0%   { opacity: .6; }
+            100% { opacity: 1; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 620px;
+            width: 100%;
+            animation: fadeUp .5s ease-out;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .header .icon { font-size: 48px; margin-bottom: 12px; }
+        .header h1 {
+            font-size: 28px; font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 8px;
+        }
+        .topic-badge {
+            display: inline-block;
+            background: rgba(99, 102, 241, .15);
+            border: 1px solid rgba(99, 102, 241, .3);
+            color: #A5B4FC;
+            padding: 6px 18px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* ── Timer + Overall Status ── */
+        .meta-bar {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin: 20px 0 28px;
+        }
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .meta-item .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .dot-running { background: var(--warning); animation: pulse 1.5s ease-in-out infinite; }
+        .dot-complete { background: var(--success); }
+        .dot-error { background: var(--error); }
+        @keyframes pulse {
+            0%, 100% { opacity: .4; transform: scale(.9); }
+            50%      { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* ── Progress Bar ── */
+        .progress-track {
+            height: 6px;
+            border-radius: 6px;
+            background: var(--surface);
+            margin-bottom: 28px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            transition: width .6s ease;
+            width: 0%;
+        }
+
+        /* ── Step Cards ── */
+        .steps { display: flex; flex-direction: column; gap: 10px; }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px 20px;
+            border-radius: 12px;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            transition: border-color .3s, background .3s, transform .2s;
+        }
+        .step.active {
+            border-color: rgba(99, 102, 241, .5);
+            background: rgba(99, 102, 241, .08);
+            transform: translateX(4px);
+        }
+        .step.done {
+            border-color: rgba(52, 211, 153, .3);
+            background: rgba(52, 211, 153, .05);
+        }
+        .step.failed {
+            border-color: rgba(248, 113, 113, .4);
+            background: rgba(248, 113, 113, .06);
+        }
+
+        /* Step number circle */
+        .step-num {
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            font-size: 14px; font-weight: 700;
+            flex-shrink: 0;
+            transition: all .3s;
+        }
+        .step.pending .step-num {
+            background: var(--surface);
+            color: var(--text-muted);
+            border: 2px solid var(--border);
+        }
+        .step.active .step-num {
+            background: linear-gradient(135deg, var(--primary), #818CF8);
+            color: white;
+            border: none;
+            box-shadow: 0 0 16px var(--primary-glow);
+        }
+        .step.done .step-num {
+            background: var(--success);
+            color: #042f2e;
+            border: none;
+        }
+        .step.failed .step-num {
+            background: var(--error);
+            color: white;
+            border: none;
+        }
+
+        .step-info { flex: 1; min-width: 0; }
+        .step-name {
+            font-size: 14px; font-weight: 600;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+        .step.pending .step-name { color: var(--text-muted); }
+        .step-detail {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Status badges */
+        .step-badge {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 999px;
+            flex-shrink: 0;
+        }
+        .badge-pending {
+            background: var(--surface);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+        .badge-running {
+            background: rgba(99, 102, 241, .15);
+            color: #A5B4FC;
+            border: 1px solid rgba(99, 102, 241, .3);
+            animation: pulseBadge 1.5s ease-in-out infinite;
+        }
+        @keyframes pulseBadge {
+            0%, 100% { opacity: .7; }
+            50%      { opacity: 1; }
+        }
+        .badge-complete {
+            background: rgba(52, 211, 153, .12);
+            color: var(--success);
+            border: 1px solid rgba(52, 211, 153, .3);
+        }
+        .badge-error {
+            background: rgba(248, 113, 113, .12);
+            color: var(--error);
+            border: 1px solid rgba(248, 113, 113, .3);
+        }
+
+        /* Spinner for active step */
+        .step-spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(99, 102, 241, .2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Result Section ── */
+        .result-section {
+            margin-top: 28px;
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            animation: fadeUp .4s ease-out;
+        }
+        .result-success {
+            background: rgba(52, 211, 153, .08);
+            border: 1px solid rgba(52, 211, 153, .25);
+        }
+        .result-error {
+            background: rgba(248, 113, 113, .08);
+            border: 1px solid rgba(248, 113, 113, .25);
+        }
+        .result-icon { font-size: 36px; margin-bottom: 10px; }
+        .result-title {
+            font-size: 18px; font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .result-success .result-title { color: var(--success); }
+        .result-error .result-title { color: var(--error); }
+        .result-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .result-desc strong { color: var(--text); }
+
+        /* ── Back Link ── */
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 28px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: opacity .2s;
+        }
+        .back-link:hover { opacity: .7; }
+
+        /* ── Error details ── */
+        .error-detail {
+            margin-top: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: left;
+            max-height: 120px;
+            overflow-y: auto;
+            word-break: break-word;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="icon" id="headerIcon">⚡</div>
+            <h1>Content Pipeline</h1>
+            <div class="topic-badge">{{ topic }}</div>
+        </div>
+
+        <!-- Meta Bar: Timer + Status -->
+        <div class="meta-bar">
+            <div class="meta-item">
+                <span class="dot dot-running" id="statusDot"></span>
+                <span id="statusText">Initializing...</span>
+            </div>
+            <div class="meta-item">
+                🕐 <span id="elapsed">0:00</span>
+            </div>
+            <div class="meta-item">
+                📊 <span id="stepCounter">0 / 5</span>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <!-- Step Cards -->
+        <div class="steps" id="stepsList">
+            <div class="step pending" id="step-1">
+                <div class="step-num">1</div>
+                <div class="step-info">
+                    <div class="step-name">Keyword Research</div>
+                    <div class="step-detail">Analyzing keywords, search volumes & competition</div>
+                </div>
+                <span class="step-badge badge-pending">Waiting</span>
+            </div>
+
+            <div class="step pending" id="step-2">
+                <div class="step-num">2</div>
+                <div class="step-info">
+                    <div class="step-name">SERP & Competitor Analysis</div>
+                    <div class="step-detail">Evaluating top-ranking pages & content gaps</div>
+                </div>
+                <span class="step-badge badge-pending">Waiting</span>
+            </div>
+
+            <div class="step pending" id="step-3">
+                <div class="step-num">3</div>
+                <div class="step-info">
+                    <div class="step-name">Content Outline</div>
+                    <div class="step-detail">Building H2 structure, meta tags & differentiation plan</div>
+                </div>
+                <span class="step-badge badge-pending">Waiting</span>
+            </div>
+
+            <div class="step pending" id="step-4">
+                <div class="step-num">4</div>
+                <div class="step-info">
+                    <div class="step-name">Full Article + FAQ + Schema</div>
+                    <div class="step-detail">Writing the complete article with FAQ & JSON-LD</div>
+                </div>
+                <span class="step-badge badge-pending">Waiting</span>
+            </div>
+
+            <div class="step pending" id="step-5">
+                <div class="step-num">5</div>
+                <div class="step-info">
+                    <div class="step-name">HTML for Elementor</div>
+                    <div class="step-detail">Converting to styled, paste-ready HTML</div>
+                </div>
+                <span class="step-badge badge-pending">Waiting</span>
+            </div>
+        </div>
+
+        <!-- Result Section (hidden until complete/error) -->
+        <div id="resultSection"></div>
+
+        <!-- Back Link -->
+        <div style="text-align: center;">
+            <a href="/" class="back-link">← Back to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+        const JOB_ID = "{{ job_id }}";
+        const POLL_INTERVAL = 2000; // ms
+        let pollTimer = null;
+        let startTime = Date.now();
+        let elapsedTimer = null;
+
+        // ── Elapsed time counter ──
+        function updateElapsed() {
+            const secs = Math.floor((Date.now() - startTime) / 1000);
+            const m = Math.floor(secs / 60);
+            const s = secs % 60;
+            document.getElementById('elapsed').textContent =
+                `${m}:${String(s).padStart(2, '0')}`;
+        }
+        elapsedTimer = setInterval(updateElapsed, 1000);
+
+        // ── Status icons ──
+        const STEP_ICONS = {
+            pending:  { num: null, badge: 'Waiting',     badgeClass: 'badge-pending' },
+            running:  { num: null, badge: 'Running...',  badgeClass: 'badge-running' },
+            complete: { num: '✓',  badge: 'Done',       badgeClass: 'badge-complete' },
+            error:    { num: '✕',  badge: 'Failed',     badgeClass: 'badge-error' },
+        };
+
+        // ── Update the UI from job data ──
+        function renderStatus(job) {
+            const steps = job.steps;
+            let completedCount = 0;
+            let totalChars = 0;
+
+            for (let i = 1; i <= 5; i++) {
+                const stepData = steps[String(i)];
+                const el = document.getElementById(`step-${i}`);
+                if (!el || !stepData) continue;
+
+                const status = stepData.status;
+                const icon = STEP_ICONS[status];
+
+                // Update card class
+                el.className = `step ${status === 'running' ? 'active' : status === 'complete' ? 'done' : status === 'error' ? 'failed' : 'pending'}`;
+
+                // Update number/icon
+                const numEl = el.querySelector('.step-num');
+                if (status === 'complete') {
+                    numEl.textContent = '✓';
+                    completedCount++;
+                    totalChars += stepData.chars || 0;
+                } else if (status === 'error') {
+                    numEl.textContent = '✕';
+                } else {
+                    numEl.textContent = i;
+                }
+
+                // Update badge
+                const badgeEl = el.querySelector('.step-badge');
+                badgeEl.className = `step-badge ${icon.badgeClass}`;
+                if (status === 'complete' && stepData.chars) {
+                    badgeEl.textContent = `${(stepData.chars / 1000).toFixed(1)}k chars`;
+                } else {
+                    badgeEl.textContent = icon.badge;
+                }
+
+                // Add/remove spinner
+                const existingSpinner = el.querySelector('.step-spinner');
+                if (status === 'running' && !existingSpinner) {
+                    const spinner = document.createElement('div');
+                    spinner.className = 'step-spinner';
+                    el.insertBefore(spinner, badgeEl);
+                } else if (status !== 'running' && existingSpinner) {
+                    existingSpinner.remove();
+                }
+            }
+
+            // Update progress bar
+            const progress = (completedCount / 5) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+
+            // Update step counter
+            document.getElementById('stepCounter').textContent = `${completedCount} / 5`;
+
+            // Update overall status
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+
+            if (job.status === 'running') {
+                const currentStep = job.current_step || 1;
+                statusDot.className = 'dot dot-running';
+                statusText.textContent = `Step ${currentStep} in progress...`;
+                document.getElementById('headerIcon').textContent = '⚡';
+            } else if (job.status === 'complete') {
+                statusDot.className = 'dot dot-complete';
+                statusText.textContent = 'Pipeline complete!';
+                document.getElementById('headerIcon').textContent = '✅';
+                showResult('success', job);
+                stopPolling();
+            } else if (job.status === 'error') {
+                statusDot.className = 'dot dot-error';
+                statusText.textContent = 'Pipeline failed';
+                document.getElementById('headerIcon').textContent = '❌';
+                showResult('error', job);
+                stopPolling();
+            }
+        }
+
+        // ── Show final result ──
+        function showResult(type, job) {
+            const section = document.getElementById('resultSection');
+            if (type === 'success') {
+                section.innerHTML = `
+                    <div class="result-section result-success">
+                        <div class="result-icon">🎉</div>
+                        <div class="result-title">Content Generated Successfully!</div>
+                        <div class="result-desc">
+                            The Elementor-ready HTML has been <strong>emailed to you</strong> along with the 
+                            article markdown draft and keyword research as attachments.
+                            <br><br>
+                            Subject line: <strong>[TCC] Content Ready: {{ topic }}</strong>
+                            <br>
+                            Output also saved to the <strong>output/</strong> directory.
+                        </div>
+                    </div>
+                `;
+            } else {
+                const errorMsg = job.error || 'Unknown error';
+                // Simplify common errors for display
+                let friendlyError = errorMsg;
+                if (errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('quota')) {
+                    friendlyError = 'Gemini API rate limit reached. Wait a minute and try again.';
+                } else if (errorMsg.includes('503') || errorMsg.includes('UNAVAILABLE')) {
+                    friendlyError = 'Gemini API is temporarily overloaded. Try again shortly.';
+                }
+
+                section.innerHTML = `
+                    <div class="result-section result-error">
+                        <div class="result-icon">⚠️</div>
+                        <div class="result-title">Pipeline Failed</div>
+                        <div class="result-desc">
+                            ${friendlyError}
+                            <br><br>
+                            Any partial results have been emailed and saved to <strong>output/</strong>.
+                        </div>
+                        <div class="error-detail">${errorMsg}</div>
+                    </div>
+                `;
+            }
+
+            clearInterval(elapsedTimer);
+        }
+
+        // ── Polling ──
+        async function pollStatus() {
+            try {
+                const res = await fetch(`/pipeline_status/${JOB_ID}`);
+                if (!res.ok) return;
+                const job = await res.json();
+                renderStatus(job);
+            } catch (err) {
+                console.warn('Poll failed:', err);
+            }
+        }
+
+        function stopPolling() {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        }
+
+        // Start polling
+        pollTimer = setInterval(pollStatus, POLL_INTERVAL);
+        pollStatus(); // Initial fetch
+    </script>
+</body>
+</html>

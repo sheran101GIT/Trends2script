@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register — Trends2Scripts</title>
+    <meta name="description" content="Create your Trends2Scripts account and start generating AI-powered content from live trends.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1E7BC4;
+            --primary-glow: rgba(30, 123, 196, .30);
+            --accent: #E8533A;
+            --accent-glow: rgba(232, 83, 58, .25);
+            --bg: #0D0D16;
+            --surface: #16161F;
+            --surface-hover: #1E1E2C;
+            --glass: rgba(22, 22, 31, .75);
+            --text: #F0F0F8;
+            --text-muted: #8A8AA8;
+            --border: rgba(255,255,255,.09);
+            --success: #34D399;
+            --error: #F87171;
+            --radius: 20px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 20% 10%, var(--primary-glow), transparent),
+                radial-gradient(ellipse 60% 50% at 80% 90%, var(--accent-glow), transparent);
+            pointer-events: none;
+            z-index: 0;
+            animation: bgPulse 8s ease-in-out infinite alternate;
+        }
+        @keyframes bgPulse {
+            0%   { opacity: .6; }
+            100% { opacity: 1; }
+        }
+
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(60px);
+            pointer-events: none;
+            z-index: 0;
+            animation: orbFloat 12s ease-in-out infinite alternate;
+        }
+        .orb-1 { width: 300px; height: 300px; background: rgba(99,102,241,.12); top: -80px; left: -80px; }
+        .orb-2 { width: 200px; height: 200px; background: rgba(236,72,153,.10); bottom: -60px; right: -60px; animation-delay: -4s; }
+        @keyframes orbFloat {
+            0%   { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, 20px) scale(1.1); }
+        }
+
+        .auth-container {
+            position: relative; z-index: 1;
+            width: 100%;
+            max-width: 460px;
+            padding: 0 24px;
+            animation: slideUp .55s cubic-bezier(.16,1,.3,1) both;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(32px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .brand-logo {
+            width: 52px; height: 52px;
+            border-radius: 13px;
+            box-shadow: 0 0 24px var(--primary-glow), 0 4px 16px rgba(0,0,0,.3);
+            margin-bottom: 10px;
+        }
+        .brand h1 {
+            font-size: 24px; font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            margin-bottom: 4px;
+        }
+        .brand p { color: var(--text-muted); font-size: 13px; }
+
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 36px 36px 32px;
+            box-shadow: 0 24px 48px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04);
+        }
+
+        .card-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+        .card-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 26px; line-height: 1.5; }
+
+        .field { margin-bottom: 16px; }
+        .field label {
+            display: block;
+            font-size: 12px; font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 7px;
+        }
+        .field .hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 5px;
+            opacity: .7;
+        }
+        .input-wrap { position: relative; }
+        .input-icon {
+            position: absolute;
+            left: 14px; top: 50%;
+            transform: translateY(-50%);
+            font-size: 15px;
+            pointer-events: none;
+            opacity: .6;
+        }
+        .field input {
+            width: 100%;
+            padding: 11px 14px 11px 40px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            background: var(--surface);
+            color: var(--text);
+            transition: border-color .2s, box-shadow .2s;
+        }
+        .field input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        .field input::placeholder { color: var(--text-muted); opacity: .6; }
+
+        /* Highlight for the receiver email field */
+        .field.highlight-field input {
+            border-color: rgba(52,211,153,.3);
+            background: rgba(52,211,153,.05);
+        }
+        .field.highlight-field input:focus {
+            border-color: #34D399;
+            box-shadow: 0 0 0 3px rgba(52,211,153,.2);
+        }
+        .field.highlight-field label { color: #34D399; }
+
+        .section-divider {
+            display: flex; align-items: center; gap: 10px;
+            margin: 20px 0 16px;
+            font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .6px;
+            color: var(--text-muted);
+        }
+        .section-divider::before, .section-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 13px;
+            font-size: 15px; font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            border: none; border-radius: 11px;
+            cursor: pointer;
+            background: linear-gradient(135deg, var(--primary), #818CF8);
+            color: #fff;
+            transition: transform .15s, box-shadow .25s, opacity .2s;
+            margin-top: 6px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-submit:hover { box-shadow: 0 6px 24px var(--primary-glow); }
+        .btn-submit:active { transform: scale(.98); }
+        .btn-submit:disabled { opacity: .5; cursor: not-allowed; }
+
+        .divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 22px 0;
+            color: var(--text-muted); font-size: 12px;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1;
+            height: 1px; background: var(--border);
+        }
+
+        .auth-link {
+            text-align: center;
+            font-size: 13px; color: var(--text-muted);
+        }
+        .auth-link a {
+            color: var(--primary); text-decoration: none;
+            font-weight: 600; transition: color .2s;
+        }
+        .auth-link a:hover { color: #818CF8; }
+
+        .flash {
+            padding: 11px 15px;
+            border-radius: 10px; font-size: 13px;
+            margin-bottom: 18px;
+            animation: fadeIn .3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .flash.error   { background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.3); color: var(--error); }
+        .flash.success { background: rgba(52,211,153,.12);  border: 1px solid rgba(52,211,153,.3);  color: var(--success); }
+
+        .spinner {
+            display: none; width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Password strength */
+        .strength-bar {
+            height: 3px;
+            border-radius: 3px;
+            margin-top: 8px;
+            background: var(--surface-hover);
+            overflow: hidden;
+        }
+        .strength-fill {
+            height: 100%;
+            border-radius: 3px;
+            width: 0%;
+            transition: width .3s, background .3s;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="auth-container">
+        <div class="brand">
+            <h1 style="font-family:'Playfair Display',serif;font-size:30px;font-weight:700;letter-spacing:-0.3px;margin-bottom:4px">
+                <span style="color:#E8E8F0">Trends</span><span style="color:#1E7BC4">2</span><span style="color:#E8533A">scripts</span>
+            </h1>
+            <p>Create your account to get started</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Create account 🚀</div>
+            <div class="card-sub">Join to access AI-powered trend analysis and content generation.</div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="/register" id="registerForm" onsubmit="handleSubmit()">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <!-- Account Info -->
+                <div class="field">
+                    <label>Username</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">👤</span>
+                        <input type="text" name="username" id="username"
+                               placeholder="Choose a username" required
+                               autocomplete="username" minlength="3" maxlength="30">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Login Email</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">✉️</span>
+                        <input type="email" name="email" id="email"
+                               placeholder="your@email.com" required autocomplete="email">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Password</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" name="password" id="password"
+                               placeholder="Min. 8 characters" required
+                               autocomplete="new-password" minlength="8"
+                               oninput="checkStrength(this.value)">
+                    </div>
+                    <div class="strength-bar">
+                        <div class="strength-fill" id="strengthFill"></div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Confirm Password</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">🔒</span>
+                        <input type="password" name="confirm_password" id="confirm_password"
+                               placeholder="Repeat your password" required autocomplete="new-password">
+                    </div>
+                </div>
+
+                <!-- Notification section -->
+                <div class="section-divider">📬 Where to send trends</div>
+
+                <div class="field highlight-field">
+                    <label>📧 Receiver Email</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">📧</span>
+                        <input type="email" name="receiver_email" id="receiver_email"
+                               placeholder="Email to receive trend reports"
+                               autocomplete="off">
+                    </div>
+                    <p class="hint">Trend reports and generated content will be sent here. You can change this later on your dashboard.</p>
+                </div>
+
+                <button type="submit" class="btn-submit" id="registerBtn">
+                    <span id="btnText">✨ Create Account</span>
+                    <div class="spinner" id="spinner"></div>
+                </button>
+            </form>
+
+            <div class="divider">or</div>
+
+            <div class="auth-link">
+                Already have an account? <a href="/login">Sign in</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkStrength(val) {
+            const fill = document.getElementById('strengthFill');
+            let score = 0;
+            if (val.length >= 8) score++;
+            if (/[A-Z]/.test(val)) score++;
+            if (/[0-9]/.test(val)) score++;
+            if (/[^A-Za-z0-9]/.test(val)) score++;
+            const colors = ['#F87171', '#FBBF24', '#34D399', '#6366F1'];
+            const pcts   = ['25%', '50%', '75%', '100%'];
+            fill.style.width      = score > 0 ? pcts[score - 1] : '0%';
+            fill.style.background = score > 0 ? colors[score - 1] : 'transparent';
+        }
+
+        function handleSubmit() {
+            const pw  = document.getElementById('password').value;
+            const cpw = document.getElementById('confirm_password').value;
+            if (pw !== cpw) {
+                alert('Passwords do not match!');
+                return false;
+            }
+            const btn = document.getElementById('registerBtn');
+            const text = document.getElementById('btnText');
+            const spinner = document.getElementById('spinner');
+            btn.disabled = true;
+            text.textContent = 'Creating account...';
+            spinner.style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>
