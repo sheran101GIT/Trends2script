@@ -26,5 +26,14 @@ class User(db.Model, UserMixin):
     workflows_run  = db.Column(db.Integer, default=0)
     created_at     = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def __init__(self, username, email, password_hash, receiver_email=None, **kwargs):
+        super(User, self).__init__(
+            username=username,
+            email=email,
+            password_hash=password_hash,
+            receiver_email=receiver_email,
+            **kwargs
+        )
+
     def __repr__(self):
         return f'<User {self.username}>'

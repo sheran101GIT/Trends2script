@@ -22,6 +22,7 @@ from prompts.step2_serp import build_step2_prompt
 from prompts.step3_outline import build_step3_prompt
 from prompts.step4_article import build_step4_prompt
 from prompts.step5_html import build_step5_prompt, get_reference_css
+from services.news_service import fetch_recent_news
 
 
 def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
@@ -94,11 +95,14 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
             update_step(job_id, 4, "running")
         print("[Step 4] Writing Article + FAQ + Schema...")
         
+        news_context = fetch_recent_news(topic)
+        print(f"[Step 4] Fetched recent news for context.")
+        
         step4 = call_groq(
-            prompt=build_step4_prompt(step3),
+            prompt=build_step4_prompt(step3, meta=meta, news_context=news_context),
             model="llama-3.3-70b-versatile",
             temperature=0.6,
-            max_tokens=8000,
+            max_tokens=6000,
         )
         result["step4_article"] = step4
         if job_id:
@@ -114,7 +118,7 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
             prompt=build_step5_prompt(step4, meta=meta),
             model="llama-3.3-70b-versatile",
             temperature=0.2,
-            max_tokens=8000,
+            max_tokens=5000,
         )
         print(f"[Step 5] Content block complete — {len(step5_raw)} chars")
 

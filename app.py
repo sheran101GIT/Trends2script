@@ -147,7 +147,7 @@ def login():
 
         # SEC-07: Same generic error regardless of whether username exists
         if user and bcrypt.check_password_hash(user.password_hash, password):
-            login_user(user, remember=True)
+            login_user(user)
             next_page = request.args.get('next')
             return redirect(next_page or url_for('dashboard'))
         else:

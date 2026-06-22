@@ -676,6 +676,7 @@ CONTENT RULES
 7. Build the FAQ section using .tcc-faq-item accordion markup.
 8. Add a bar chart if the article has ranked numeric data (salary levels, etc.).
 9. Use .tcc-co-grid for company comparisons, .tcc-factor-grid for factor/reason lists.
+10. Convert any [LINK: url] citations into actual clickable HTML anchor tags (e.g. <a href="url" target="_blank" rel="noopener noreferrer">Source</a>).
 
 OUTPUT: Output ONLY the raw HTML block described above.
 No explanation. No markdown fences. No <html>/<head>/<body>/<style> tags.
