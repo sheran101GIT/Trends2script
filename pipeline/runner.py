@@ -51,7 +51,7 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
         print("[Step 1] Keyword Research...")
         step1 = call_groq(
             prompt=build_step1_prompt(topic),
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",  # Fast model — saves 70b quota for writing
             temperature=0.3,
             max_tokens=2048,
         )
@@ -66,7 +66,7 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
         print("[Step 2] SERP Analysis...")
         step2 = call_groq(
             prompt=build_step2_prompt(step1),
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",  # Fast model — saves 70b quota for writing
             temperature=0.3,
             max_tokens=3000,
         )
@@ -81,7 +81,7 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
         print("[Step 3] Content Outline...")
         step3 = call_groq(
             prompt=build_step3_prompt(step1, step2),
-            model="llama-3.3-70b-versatile",
+            model="llama-3.1-8b-instant",  # Fast model — saves 70b quota for writing
             temperature=0.4,
             max_tokens=2048,
         )
