@@ -24,15 +24,18 @@ def generate_with_retry(client, prompt, max_retries=5, initial_delay=5):
             if waited > 0:
                 print(f"[LLM Service] Rate limiter held for {waited:.1f}s")
 
-            # Use gemini-2.0-flash with thinking_budget=0 to disable thinking mode.
-            # Thinking mode consumes output tokens on hidden reasoning, which can truncate
-            # the actual JSON response. Disabling it gives full output budget to the response.
-            return client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt,
-                config=types.GenerateContentConfig(
+            # Use configurable model (defaulting to gemini-2.5-flash)
+            model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+            config = None
+            if model_name.startswith("gemini-2.0") or model_name.startswith("gemini-3.5") or model_name.startswith("gemini-2.5"):
+                # Thinking mode is supported on 2.0 and 3.5 models
+                config = types.GenerateContentConfig(
                     thinking_config=types.ThinkingConfig(thinking_budget=0)
                 )
+            return client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=config
             )
         except Exception as e:
             error_str = str(e)

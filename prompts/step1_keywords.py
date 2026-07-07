@@ -1,15 +1,18 @@
 """Step 1 — Keyword Research prompt"""
 
 
-def build_step1_prompt(topic: str) -> str:
+def build_step1_prompt(topic: str, news_context: str = "") -> str:
     return f"""
 STEP 1: KEYWORD RESEARCH
 
 Topic received: {topic}
 Country: India
 
+[RECENT NEWS & SOURCES]:
+{news_context}
+
 Using SEMrush Keyword Magic Tool (phrase_fullsearch), pull the top 20
-keywords for this topic in the India database.
+keywords for this topic in the India database. Make sure to prioritize keywords, user queries, and search intents that directly align with or are triggered by the current affairs and news developments listed above in [RECENT NEWS & SOURCES].
 
 Sort results into three buckets:
 

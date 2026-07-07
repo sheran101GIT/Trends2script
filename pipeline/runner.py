@@ -22,6 +22,8 @@ from prompts.step2_serp import build_step2_prompt
 from prompts.step3_outline import build_step3_prompt
 from prompts.step4_article import build_step4_prompt
 from prompts.step5_html import build_step5_prompt, get_reference_css
+from prompts.step5a_extract import build_step5a_prompt
+from services.html_builder import build_html_from_json
 from services.news_service import fetch_recent_news
 
 
@@ -45,12 +47,28 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
     result = {"topic": topic, "started_at": datetime.now().isoformat()}
 
     try:
+        # Fetch recent news context at the beginning so it can be passed to early steps
+        news_list = fetch_recent_news(topic)
+        url_mapping = {}
+        news_items = []
+        for idx, item in enumerate(news_list, 1):
+            ref_tag = f"[LINK: {idx}]"
+            url_mapping[str(idx)] = item["link"]
+            news_items.append(f"- Title: {item['title']}\n  Reference Tag: {ref_tag}")
+            
+        if news_items:
+            news_context = "\n\n".join(news_items)
+        else:
+            news_context = "No recent news found."
+            
+        print(f"[Pipeline] Fetched {len(news_list)} recent news items for topic '{topic}'")
+
         # Step 1 — Keyword Research
         if job_id:
             update_step(job_id, 1, "running")
         print("[Step 1] Keyword Research...")
         step1 = call_groq(
-            prompt=build_step1_prompt(topic),
+            prompt=build_step1_prompt(topic, news_context=news_context),
             model="llama-3.1-8b-instant",  # Fast model — saves 70b quota for writing
             temperature=0.3,
             max_tokens=2048,
@@ -80,7 +98,7 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
             update_step(job_id, 3, "running")
         print("[Step 3] Content Outline...")
         step3 = call_groq(
-            prompt=build_step3_prompt(step1, step2),
+            prompt=build_step3_prompt(step1, step2, news_context=news_context),
             model="llama-3.1-8b-instant",  # Fast model — saves 70b quota for writing
             temperature=0.4,
             max_tokens=2048,
@@ -95,9 +113,6 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
             update_step(job_id, 4, "running")
         print("[Step 4] Writing Article + FAQ + Schema...")
         
-        news_context = fetch_recent_news(topic)
-        print(f"[Step 4] Fetched recent news for context.")
-        
         step4 = call_groq(
             prompt=build_step4_prompt(step3, meta=meta, news_context=news_context),
             model="llama-3.3-70b-versatile",
@@ -109,8 +124,7 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
             update_step(job_id, 4, "complete", chars=len(step4))
         print(f"[Step 4] Complete — {len(step4)} chars")
 
-        # Step 5 — Full standalone HTML page
-        # Using Groq instead of Gemini due to rate limits
+        # Step 5 — Full HTML generation via LLM
         if job_id:
             update_step(job_id, 5, "running")
         print("[Step 5] Generating HTML content block...")
@@ -128,6 +142,12 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
         # PIPE-06: Escape topic for safe use inside HTML attribute (title tag)
         # html.escape handles <, >, &, ", ' — safe to inject into <title>
         safe_title = html.escape(topic)
+
+        # Safety: ensure LLM output is wrapped in .tcc-wrap
+        content_html = step5_raw
+        if '<div class="tcc-wrap">' not in content_html:
+            content_html = f'<div class="tcc-wrap">\n{content_html}\n</div>'
+
         step5 = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -137,16 +157,31 @@ def run_pipeline(topic: str, job_id: str = None, meta: dict = None) -> dict:
   {css_block}
 </head>
 <body>
-{step5_raw}
+{content_html}
 <script>
+  // FAQ Accordion — reference template behavior (close others on open)
   document.querySelectorAll('.tcc-faq-q').forEach(function(q) {{
     q.addEventListener('click', function() {{
-      this.closest('.tcc-faq-item').classList.toggle('open');
+      var item = this.parentElement;
+      var was = item.classList.contains('open');
+      document.querySelectorAll('.tcc-faq-item').forEach(function(x){{ x.classList.remove('open'); }});
+      if (!was) item.classList.add('open');
     }});
   }});
 </script>
 </body>
 </html>"""
+
+        # Replace [LINK: X] tags with HTML anchors in the final HTML
+        import re
+        def replace_link(match):
+            link_num = match.group(1)
+            url = url_mapping.get(link_num)
+            if url:
+                return f'<a href="{url}" target="_blank" rel="noopener noreferrer" style="color:#f542b0;text-decoration:underline;">Source</a>'
+            return ""
+
+        step5 = re.sub(r'\[LINK:\s*(\d+)\]', replace_link, step5, flags=re.IGNORECASE)
 
         result["step5_html"] = step5
         if job_id:
@@ -195,8 +230,51 @@ def _schedule_cleanup(job_id: str, delay_seconds: int = 3600):
     t.start()
 
 
+def cleanup_old_outputs(max_age_seconds: int = 86400):
+    """
+    Deletes files in the output/ directory that are older than max_age_seconds (default 24 hours).
+    Does NOT delete the .gitkeep file.
+    """
+    try:
+        output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
+        if not os.path.exists(output_dir):
+            return
+        
+        now = time.time()
+        for filename in os.listdir(output_dir):
+            if filename == ".gitkeep":
+                continue
+            
+            file_path = os.path.join(output_dir, filename)
+            if os.path.isfile(file_path):
+                file_age = now - os.path.getmtime(file_path)
+                if file_age > max_age_seconds:
+                    try:
+                        os.remove(file_path)
+                        print(f"[Cleanup] Deleted old output file: {file_path}")
+                    except Exception as err:
+                        print(f"[Cleanup] Error deleting file {file_path}: {err}")
+    except Exception as e:
+        print(f"[Cleanup] Warning: Failed to clean up old outputs: {e}")
+
+
+def start_cleanup_scheduler():
+    """Starts a background daemon thread that runs cleanup_old_outputs once every hour."""
+    def run_cleanup():
+        print("[Cleanup Scheduler] Started background cleanup thread.")
+        while True:
+            cleanup_old_outputs()
+            time.sleep(3600)
+            
+    t = threading.Thread(target=run_cleanup, daemon=True)
+    t.start()
+
+
 def _save_output(topic: str, result: dict):
     """Save the final HTML page to the output/ directory as a local backup."""
+    # Run a cleanup to delete files older than 24 hours
+    cleanup_old_outputs()
+
     try:
         output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "output")
         os.makedirs(output_dir, exist_ok=True)

@@ -12,7 +12,7 @@ from models import db, User
 from services.trends_extractor import fetch_trends
 from services.llm_service import process_trends
 from services.email_service import send_trends_email, send_content_email, send_html_file_email
-from pipeline.runner import run_pipeline
+from pipeline.runner import run_pipeline, start_cleanup_scheduler
 from pipeline.status import create_job, get_job
 
 # ─────────────────────────────────────────────
@@ -65,6 +65,9 @@ def load_user(user_id):
 # Create tables on first run
 with app.app_context():
     db.create_all()
+
+# Start background cleanup thread for output files
+start_cleanup_scheduler()
 
 
 # ─────────────────────────────────────────────

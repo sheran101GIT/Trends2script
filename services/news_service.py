@@ -2,26 +2,27 @@ import urllib.parse
 # pyrefly: ignore [missing-import]
 import feedparser
 
-def fetch_recent_news(topic: str, max_items: int = 5) -> str:
+def fetch_recent_news(topic: str, max_items: int = 5) -> list:
     """
     Fetches recent news articles from Google News RSS for the given topic.
-    Returns a formatted string containing the headlines and their links.
+    Returns a list of dicts containing the title and link.
     """
     try:
         encoded_topic = urllib.parse.quote(topic)
-        url = f"https://news.google.com/rss/search?q={encoded_topic}&hl=en-US&gl=US&ceid=US:en"
+        url = f"https://news.google.com/rss/search?q={encoded_topic}&hl=en-IN&gl=IN&ceid=IN:en"
         feed = feedparser.parse(url)
         
         if not feed.entries:
-            return "No recent news found."
+            return []
             
         news_items = []
         for entry in feed.entries[:max_items]:
-            title = entry.title
-            link = entry.link
-            news_items.append(f"- {title}\n  Source Link: {link}")
+            news_items.append({
+                "title": entry.title,
+                "link": entry.link
+            })
             
-        return "\n\n".join(news_items)
+        return news_items
     except Exception as e:
         print(f"[News Service] Error fetching news for '{topic}': {e}")
-        return "Failed to fetch recent news."
+        return []

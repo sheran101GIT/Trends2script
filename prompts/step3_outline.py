@@ -1,7 +1,7 @@
 """Step 3 — Content Outline prompt"""
 
 
-def build_step3_prompt(step1_output: str, step2_output: str) -> str:
+def build_step3_prompt(step1_output: str, step2_output: str, news_context: str = "") -> str:
     return f"""
 STEP 3: BUILD CONTENT OUTLINE
 
@@ -11,8 +11,16 @@ STEP 3: BUILD CONTENT OUTLINE
 [Step 2 — SERP Analysis]:
 {step2_output}
 
+[RECENT NEWS & SOURCES]:
+{news_context}
+
 Content type: determine from topic (evergreen hub / trend piece / live blog)
 Target word count: 1,800-2,500 words (hub) / 800-1,000 words (trend/news)
+
+CORE OUTLINE INSTRUCTION:
+- You MUST design the content outline to revolve around the current affairs, news developments, and latest updates mentioned in [RECENT NEWS & SOURCES].
+- Instead of a generic career/academic guide, structure the outline sections (H2s) to directly analyze, explain, or discuss these recent events, news developments, and their implications.
+- The outline must prioritize explaining the "what, why, when, and how" of these recent occurrences and how they affect professionals, students, or candidates in their careers.
 
 META:
 - H1 title (primary keyword included naturally)
